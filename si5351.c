@@ -1,12 +1,10 @@
 // vim: set ai et ts=4 sw=4:
 
-// change for your MCU
-#include "stm32f1xx_hal.h"
-
 #include <si5351.h>
-#define SI5351_ADDRESS 0x60
-#define I2C_HANDLE hi2c1
-extern I2C_HandleTypeDef I2C_HANDLE;
+
+#include "si5351_config.h"
+#include "i2c.h"
+
 
 // Private procedures.
 void si5351_writeBulk(uint8_t baseaddr, int32_t P1, int32_t P2, int32_t P3, uint8_t divBy4, si5351RDiv_t rdiv);
@@ -91,12 +89,6 @@ enum {
     SI5351_REGISTER_183_CRYSTAL_INTERNAL_LOAD_CAPACITANCE = 183
 };
 
-typedef enum {
-    SI5351_CRYSTAL_LOAD_6PF  = (1<<6),
-    SI5351_CRYSTAL_LOAD_8PF  = (2<<6),
-    SI5351_CRYSTAL_LOAD_10PF = (3<<6)
-} si5351CrystalLoad_t;
-
 int32_t si5351Correction;
 
 /*
@@ -105,7 +97,7 @@ int32_t si5351Correction;
  * It can be measured at lower frequencies and scaled linearly.
  * E.g. if you get 10_000_097 Hz instead of 10_000_000 Hz, `correction` is 97*10 = 970
  */
-void si5351_Init(int32_t correction) {
+void si5351_Init(int32_t correction, si5351CrystalLoad_t crytalLoad) {
     si5351Correction = correction;
 
     // Disable all outputs by setting CLKx_DIS high
@@ -122,7 +114,6 @@ void si5351_Init(int32_t correction) {
     si5351_write(SI5351_REGISTER_23_CLK7_CONTROL, 0x80);
 
     // Set the load capacitance for the XTAL
-    si5351CrystalLoad_t crystalLoad = SI5351_CRYSTAL_LOAD_10PF;
     si5351_write(SI5351_REGISTER_183_CRYSTAL_INTERNAL_LOAD_CAPACITANCE, crystalLoad);
 }
 
@@ -248,7 +239,7 @@ void si5351_Calc(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig_t
     // For any Fclk in [500K, 160MHz] this algorithm finds a solution
     // such as abs(Ffound - Fclk) <= 6 Hz
 
-    const int32_t Fxtal = 25000000;
+    const int32_t Fxtal = SI5351_XTAL_FREQ;
     int32_t a, b, c, x, y, z, t;
 
     if(Fclk < 81000000) {
@@ -294,7 +285,7 @@ void si5351_Calc(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig_t
 // use the same PLL to make it work. Fclk can be from 1.4 MHz to 100 MHz. The actual frequency will
 // differ less than 4 Hz from given Fclk, assuming `correction` is right.
 void si5351_CalcIQ(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig_t* out_conf) {
-    const int32_t Fxtal = 25000000;
+    const int32_t Fxtal = SI5351_XTAL_FREQ;
     int32_t Fpll;
 
     if(Fclk < 1400000) Fclk = 1400000;

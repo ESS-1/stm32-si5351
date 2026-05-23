@@ -212,6 +212,12 @@ int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrengt
     return 0;
 }
 
+// Waits for the specified PLL to lock and system initialization to complete.
+// Returns true if PLL successfully locked; false if an error or timeout occured
+bool si5351_WaitPLLReady(si5351PLL_t pll) {
+    //TODO: Implement
+}
+
 // Calculates PLL, MS and RDiv settings for given Fclk in [8_000, 160_000_000] range.
 // The actual frequency will differ less than 6 Hz from given Fclk, assuming `correction` is right.
 void si5351_Calc(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig_t* out_conf) {

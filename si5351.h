@@ -3,6 +3,7 @@
 #define _SI5351_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum {
     SI5351_PLL_A = 0,
@@ -82,5 +83,7 @@ void si5351_CalcIQ(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig
 
 void si5351_SetupPLL(si5351PLL_t pll, si5351PLLConfig_t* conf);
 int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrength_t driveStength, si5351OutputConfig_t* conf, uint8_t phaseOffset);
+
+bool si5351_WaitPLLReady(si5351PLL_t pll);
 
 #endif

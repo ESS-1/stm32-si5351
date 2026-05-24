@@ -1,7 +1,7 @@
 #include <si5351.h>
 
-#include "si5351_config.h"
 #include "i2c.h"
+#include "si5351_config.h"
 
 
 // Private procedures.

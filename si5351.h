@@ -92,6 +92,6 @@ int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrengt
 
 // Waits for the specified PLL to lock and system initialization to complete.
 // Returns true if PLL successfully locked; false if an error or timeout occurred
-bool si5351_WaitPLLReady(si5351PLL_t pll, uint32_t initTimeout_ms = 150, uint32_t lockTimeout_ms = 200);
+bool si5351_WaitPLLReady(si5351PLL_t pll, uint32_t initTimeout_ms, uint32_t lockTimeout_ms);
 
 #endif

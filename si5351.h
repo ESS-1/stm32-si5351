@@ -1,4 +1,3 @@
-// vim: set ai et ts=4 sw=4:
 #ifndef _SI5351_H_
 #define _SI5351_H_
 
@@ -15,6 +14,13 @@ typedef enum {
     SI5351_CRYSTAL_LOAD_8PF  = (2<<6),
     SI5351_CRYSTAL_LOAD_10PF = (3<<6)
 } si5351CrystalLoad_t;
+
+typedef enum {
+    SI5351_STATUS_SYS_INIT   = (1 << 7),
+    SI5351_STATUS_LOL_A      = (1 << 6),
+    SI5351_STATUS_LOL_B      = (1 << 5),
+    SI5351_STATUS_LOS_CLKIN  = (1 << 4)
+} si5351Status_t;
 
 typedef enum {
     SI5351_R_DIV_1   = 0,
@@ -56,7 +62,7 @@ typedef struct {
  * CLK0 and CLK2 were chosen because they are distant from each other on a common
  * Si5351 module. This makes using them a little more convenient than CLK0 and CLK1.
  */
-void si5351_Init(int32_t correction);
+void si5351_Init(int32_t correction, si5351CrystalLoad_t crystalLoad);
 void si5351_SetupCLK0(int32_t Fclk, si5351DriveStrength_t driveStrength);
 void si5351_SetupCLK2(int32_t Fclk, si5351DriveStrength_t driveStrength);
 void si5351_EnableOutputs(uint8_t enabled);
@@ -82,8 +88,10 @@ void si5351_Calc(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig_t
 void si5351_CalcIQ(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig_t* out_conf);
 
 void si5351_SetupPLL(si5351PLL_t pll, si5351PLLConfig_t* conf);
-int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrength_t driveStength, si5351OutputConfig_t* conf, uint8_t phaseOffset);
+int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrength_t driveStrength, si5351OutputConfig_t* conf, uint8_t phaseOffset);
 
-bool si5351_WaitPLLReady(si5351PLL_t pll);
+// Waits for the specified PLL to lock and system initialization to complete.
+// Returns true if PLL successfully locked; false if an error or timeout occurred
+bool si5351_WaitPLLReady(si5351PLL_t pll, uint32_t initTimeout_ms = 150, uint32_t lockTimeout_ms = 200);
 
 #endif

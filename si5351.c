@@ -1,5 +1,3 @@
-// vim: set ai et ts=4 sw=4:
-
 #include <si5351.h>
 
 #include "si5351_config.h"
@@ -9,6 +7,7 @@
 // Private procedures.
 void si5351_writeBulk(uint8_t baseaddr, int32_t P1, int32_t P2, int32_t P3, uint8_t divBy4, si5351RDiv_t rdiv);
 void si5351_write(uint8_t reg, uint8_t value);
+uint8_t si5351_read(uint8_t reg);
 
 // See http://www.silabs.com/Support%20Documents/TechnicalDocs/AN619.pdf
 enum {
@@ -97,7 +96,7 @@ int32_t si5351Correction;
  * It can be measured at lower frequencies and scaled linearly.
  * E.g. if you get 10_000_097 Hz instead of 10_000_000 Hz, `correction` is 97*10 = 970
  */
-void si5351_Init(int32_t correction, si5351CrystalLoad_t crytalLoad) {
+void si5351_Init(int32_t correction, si5351CrystalLoad_t crystalLoad) {
     si5351Correction = correction;
 
     // Disable all outputs by setting CLKx_DIS high
@@ -213,9 +212,43 @@ int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrengt
 }
 
 // Waits for the specified PLL to lock and system initialization to complete.
-// Returns true if PLL successfully locked; false if an error or timeout occured
-bool si5351_WaitPLLReady(si5351PLL_t pll) {
-    //TODO: Implement
+// Returns true if PLL successfully locked; false if an error or timeout occurred
+bool si5351_WaitPLLReady(si5351PLL_t pll, uint32_t initTimeout_ms, uint32_t lockTimeout_ms) {
+    uint32_t start_tick = HAL_GetTick();
+    uint8_t status = 0;
+    uint8_t pll_lock_mask = (pll == SI5351_PLL_A) ? SI5351_STATUS_LOL_A : SI5351_STATUS_LOL_B;
+
+    // Wait for system initialization (SYS_INIT bit 7) to clear
+    while (1) {
+        status = si5351_read(SI5351_REGISTER_0_DEVICE_STATUS);
+        if ((status & SI5351_STATUS_SYS_INIT) == 0) {
+            break;
+        }
+        if ((HAL_GetTick() - start_tick) > initTimeout_ms) {
+            return false; // System initialization timed out
+        }
+        HAL_Delay(2);
+    }
+
+    // Wait for the chosen PLL Loss-of-Lock (LOL) bit to clear
+    start_tick = HAL_GetTick();
+    while (1) {
+        status = si5351_read(SI5351_REGISTER_0_DEVICE_STATUS);
+
+        // Critical block: check if reference clock signal is absent (Loss Of Signal)
+        if (status & SI5351_STATUS_LOS_CLKIN) {
+            return false; // Reference clock missing, wait is futile
+        }
+
+        if ((status & pll_lock_mask) == 0) {
+            return true; // PLL locked successfully
+        }
+        
+        if ((HAL_GetTick() - start_tick) > lockTimeout_ms) {
+            return false; // PLL lock timed out
+        }
+        HAL_Delay(2);
+    }
 }
 
 // Calculates PLL, MS and RDiv settings for given Fclk in [8_000, 160_000_000] range.
@@ -371,6 +404,21 @@ void si5351_write(uint8_t reg, uint8_t value) {
                       (uint8_t*)(&value),           // write returned data to this variable
                       1,                            // how many bytes to expect returned
                       HAL_MAX_DELAY);               // timeout
+}
+
+// Reads an 8 bit value of a register over I2C.
+uint8_t si5351_read(uint8_t reg) {
+    uint8_t value = 0;
+    while (HAL_I2C_IsDeviceReady(&I2C_HANDLE, (uint16_t)(SI5351_ADDRESS<<1), 3, HAL_MAX_DELAY) != HAL_OK) { }
+
+    HAL_I2C_Mem_Read(&I2C_HANDLE,                  // i2c handle
+                     (uint8_t)(SI5351_ADDRESS<<1), // i2c address, left aligned
+                     (uint8_t)reg,                 // register address
+                     I2C_MEMADD_SIZE_8BIT,         // si5351 uses 8bit register addresses
+                     &value,                       // read returned data to this variable
+                     1,                            // how many bytes to expect returned
+                     HAL_MAX_DELAY);               // timeout
+    return value;
 }
 
 // Common code for _SetupPLL and _SetupOutput

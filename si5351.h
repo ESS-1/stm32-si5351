@@ -16,10 +16,10 @@ typedef enum {
 } si5351CrystalLoad_t;
 
 typedef enum {
-    SI5351_STATUS_SYS_INIT   = (1 << 7),
-    SI5351_STATUS_LOL_A      = (1 << 6),
-    SI5351_STATUS_LOL_B      = (1 << 5),
-    SI5351_STATUS_LOS_CLKIN  = (1 << 4)
+    SI5351_STATUS_LOS_CLKIN  = (1 << 4),
+    SI5351_STATUS_LOL_A      = (1 << 5),
+    SI5351_STATUS_LOL_B      = (1 << 6),
+    SI5351_STATUS_SYS_INIT   = (1 << 7)
 } si5351Status_t;
 
 typedef enum {

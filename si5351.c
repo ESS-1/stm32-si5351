@@ -8,6 +8,8 @@
 void si5351_writeBulk(uint8_t baseaddr, int32_t P1, int32_t P2, int32_t P3, uint8_t divBy4, si5351RDiv_t rdiv);
 void si5351_write(uint8_t reg, uint8_t value);
 uint8_t si5351_read(uint8_t reg);
+static bool si5351_PLLCanUseIntegerMode(const si5351PLLConfig_t* conf);
+static void si5351_SetPLLIntegerMode(si5351PLL_t pll, bool enabled);
 
 // See http://www.silabs.com/Support%20Documents/TechnicalDocs/AN619.pdf
 enum {
@@ -131,6 +133,7 @@ void si5351_SetupPLL(si5351PLL_t pll, si5351PLLConfig_t* conf) {
     // Get the appropriate base address for the PLL registers
     uint8_t baseaddr = (pll == SI5351_PLL_A ? 26 : 34);
     si5351_writeBulk(baseaddr, P1, P2, P3, 0, 0);
+    si5351_SetPLLIntegerMode(pll, si5351_PLLCanUseIntegerMode(conf));
 
     // Target only the specific PLL being configured to avoid glitching the active one
     if (pll == SI5351_PLL_A) {
@@ -139,6 +142,19 @@ void si5351_SetupPLL(si5351PLL_t pll, si5351PLLConfig_t* conf) {
     else {
         si5351_write(SI5351_REGISTER_177_PLL_RESET, (1 << 7)); // Reset PLLB only
     }
+}
+
+static bool si5351_PLLCanUseIntegerMode(const si5351PLLConfig_t* conf) {
+    return (conf->num == 0) &&
+           (conf->denom == 1) &&
+           (conf->mult >= 16) &&
+           (conf->mult <= 90) &&
+           ((conf->mult & 1) == 0);
+}
+
+static void si5351_SetPLLIntegerMode(si5351PLL_t pll, bool enabled) {
+    uint8_t controlRegister = (pll == SI5351_PLL_A) ? SI5351_REGISTER_22_CLK6_CONTROL : SI5351_REGISTER_23_CLK7_CONTROL;
+    si5351_write(controlRegister, enabled ? 0xC0 : 0x80);
 }
 
 // Configures PLL source, drive strength, multisynth divider, Rdivider and phaseOffset.
@@ -212,43 +228,64 @@ int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrengt
 }
 
 // Waits for the specified PLL to lock and system initialization to complete.
-// Returns true if PLL successfully locked; false if an error or timeout occurred
-bool si5351_WaitPLLReady(si5351PLL_t pll, uint32_t initTimeout_ms, uint32_t lockTimeout_ms) {
+// Returns true if PLL successfully locked; false if timeout occurred.
+bool si5351_WaitPLLReady(si5351PLL_t pll, uint32_t timeout_ms) {
     uint32_t start_tick = HAL_GetTick();
     uint8_t status = 0;
-    uint8_t pll_lock_mask = (pll == SI5351_PLL_A) ? SI5351_STATUS_LOL_A : SI5351_STATUS_LOL_B;
 
-    // Wait for system initialization (SYS_INIT bit 7) to clear
-    while (1) {
-        status = si5351_read(SI5351_REGISTER_0_DEVICE_STATUS);
-        if ((status & SI5351_STATUS_SYS_INIT) == 0) {
-            break;
-        }
-        if ((HAL_GetTick() - start_tick) > initTimeout_ms) {
-            return false; // System initialization timed out
-        }
-        HAL_Delay(2);
+    uint8_t pll_lock_mask;
+    if (pll == SI5351_PLL_A) {
+        pll_lock_mask = SI5351_STATUS_LOL_A;
+    }
+    else if (pll == SI5351_PLL_B) {
+        pll_lock_mask = SI5351_STATUS_LOL_B;
+    }
+    else {
+        return false;
     }
 
-    // Wait for the chosen PLL Loss-of-Lock (LOL) bit to clear
-    start_tick = HAL_GetTick();
     while (1) {
         status = si5351_read(SI5351_REGISTER_0_DEVICE_STATUS);
 
-        // Critical block: check if reference clock signal is absent (Loss Of Signal)
-        if (status & SI5351_STATUS_LOS_CLKIN) {
-            return false; // Reference clock missing, wait is futile
+        // Ready when:
+        // - system initialization is complete
+        // - crystal / XA reference is valid
+        // - selected PLL is locked
+        if (((status & SI5351_STATUS_SYS_INIT) == 0) &&
+            ((status & SI5351_STATUS_LOS_XTAL) == 0) &&
+            ((status & pll_lock_mask) == 0)) {
+            return true;
         }
 
-        if ((status & pll_lock_mask) == 0) {
-            return true; // PLL locked successfully
+        if ((uint32_t)(HAL_GetTick() - start_tick) >= timeout_ms) {
+            return false;
         }
-        
-        if ((HAL_GetTick() - start_tick) > lockTimeout_ms) {
-            return false; // PLL lock timed out
-        }
+
         HAL_Delay(2);
     }
+}
+
+si5351ReadyFlags_t si5351_GetReadyStatus(void) {
+    uint8_t status = si5351_read(SI5351_REGISTER_0_DEVICE_STATUS);
+    si5351ReadyFlags_t flags = SI5351_READY_NONE;
+
+    if ((status & SI5351_STATUS_SYS_INIT) == 0) {
+        flags |= SI5351_READY_SYS_INIT_DONE;
+    }
+
+    if ((status & SI5351_STATUS_LOS_XTAL) == 0) {
+        flags |= SI5351_READY_XTAL_VALID;
+    }
+
+    if ((status & SI5351_STATUS_LOL_A) == 0) {
+        flags |= SI5351_READY_PLLA_LOCKED;
+    }
+
+    if ((status & SI5351_STATUS_LOL_B) == 0) {
+        flags |= SI5351_READY_PLLB_LOCKED;
+    }
+
+    return flags;
 }
 
 // Calculates PLL, MS and RDiv settings for given Fclk in [8_000, 160_000_000] range.

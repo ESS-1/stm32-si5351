@@ -16,6 +16,7 @@ typedef enum {
 } si5351CrystalLoad_t;
 
 typedef enum {
+    SI5351_STATUS_LOS_XTAL   = (1 << 3),
     SI5351_STATUS_LOS_CLKIN  = (1 << 4),
     SI5351_STATUS_LOL_A      = (1 << 5),
     SI5351_STATUS_LOL_B      = (1 << 6),
@@ -39,6 +40,19 @@ typedef enum {
     SI5351_DRIVE_STRENGTH_6MA = 0x02, //  ~ 9.5 dBm
     SI5351_DRIVE_STRENGTH_8MA = 0x03, // ~ 10.7 dBm
 } si5351DriveStrength_t;
+
+typedef enum {
+    SI5351_READY_NONE = 0x00,
+
+    SI5351_READY_SYS_INIT_DONE = 0x01, // SYS_INIT == 0
+    SI5351_READY_XTAL_VALID    = 0x02, // LOS_XTAL == 0
+    SI5351_READY_PLLA_LOCKED   = 0x04, // LOL_A == 0
+    SI5351_READY_PLLB_LOCKED   = 0x08, // LOL_B == 0
+
+    SI5351_READY_PLLA_READY = SI5351_READY_SYS_INIT_DONE | SI5351_READY_XTAL_VALID | SI5351_READY_PLLA_LOCKED,
+    SI5351_READY_PLLB_READY = SI5351_READY_SYS_INIT_DONE | SI5351_READY_XTAL_VALID | SI5351_READY_PLLB_LOCKED,
+    SI5351_READY_ALL        = SI5351_READY_SYS_INIT_DONE | SI5351_READY_XTAL_VALID | SI5351_READY_PLLA_LOCKED | SI5351_READY_PLLB_LOCKED
+} si5351ReadyFlags_t;
 
 typedef struct {
     int32_t mult;
@@ -92,6 +106,7 @@ int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrengt
 
 // Waits for the specified PLL to lock and system initialization to complete.
 // Returns true if PLL successfully locked; false if an error or timeout occurred
-bool si5351_WaitPLLReady(si5351PLL_t pll, uint32_t initTimeout_ms, uint32_t lockTimeout_ms);
+bool si5351_WaitPLLReady(si5351PLL_t pll, uint32_t timeout_ms);
+si5351ReadyFlags_t si5351_GetReadyStatus(void);
 
 #endif

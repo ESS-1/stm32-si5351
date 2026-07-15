@@ -160,7 +160,7 @@ static void si5351_SetPLLIntegerMode(si5351PLL_t pll, bool enabled) {
 
 // Configures PLL source, drive strength, multisynth divider, Rdivider and phaseOffset.
 // Returns 0 on success, != 0 otherwise.
-int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrength_t driveStrength, si5351OutputConfig_t* conf, uint8_t phaseOffset) {
+int si5351_SetupChannel(uint8_t output, si5351PLL_t pllSource, si5351DriveStrength_t driveStrength, si5351OutputConfig_t* conf, uint8_t phaseOffset) {
     int32_t div = conf->div;
     int32_t num = conf->num;
     int32_t denom = conf->denom;
@@ -226,6 +226,44 @@ int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrengt
     si5351_write(phaseOffsetRegister, (phaseOffset & 0x7F));
 
     return 0;
+}
+
+// Disable a single clock channel completely by powering it down and clearing its parameters.
+void si5351_DisableChannel(uint8_t output) {
+    if (output > 2) {
+        return;
+    }
+
+    uint8_t baseaddr = 0;
+    uint8_t phaseOffsetRegister = 0;
+    uint8_t clkControlRegister = 0;
+
+    switch (output) {
+    case 0:
+        baseaddr = SI5351_REGISTER_42_MULTISYNTH0_PARAMETERS_1;
+        phaseOffsetRegister = SI5351_REGISTER_165_CLK0_INITIAL_PHASE_OFFSET;
+        clkControlRegister = SI5351_REGISTER_16_CLK0_CONTROL;
+        break;
+    case 1:
+        baseaddr = SI5351_REGISTER_50_MULTISYNTH1_PARAMETERS_1;
+        phaseOffsetRegister = SI5351_REGISTER_166_CLK1_INITIAL_PHASE_OFFSET;
+        clkControlRegister = SI5351_REGISTER_17_CLK1_CONTROL;
+        break;
+    case 2:
+        baseaddr = SI5351_REGISTER_58_MULTISYNTH2_PARAMETERS_1;
+        phaseOffsetRegister = SI5351_REGISTER_167_CLK2_INITIAL_PHASE_OFFSET;
+        clkControlRegister = SI5351_REGISTER_18_CLK2_CONTROL;
+        break;
+    }
+
+    // Reset Multisynth parameters to 0
+    si5351_writeBulk(baseaddr, 0, 0, 0, 0, 0);
+
+    // Reset Phase Offset register to 0
+    si5351_write(phaseOffsetRegister, 0);
+
+    // Power down the channel
+    si5351_write(clkControlRegister, 0x80);
 }
 
 // Waits for the specified PLL to lock and system initialization to complete.
@@ -401,28 +439,6 @@ void si5351_CalcIQ(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig
     pll_conf->mult = Fpll / Fxtal;
     pll_conf->num = (Fpll % Fxtal) / 24;
     pll_conf->denom = Fxtal / 24; // denom can't exceed 0xFFFFF
-}
-
-// Setup CLK0 for given frequency and drive strength. Use PLLA.
-void si5351_SetupCLK0(int32_t Fclk, si5351DriveStrength_t driveStrength) {
-	si5351PLLConfig_t pll_conf;
-	si5351OutputConfig_t out_conf;
-
-	si5351_Calc(Fclk, &pll_conf, &out_conf);
-	si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
-	si5351_SetupOutput(0, SI5351_PLL_A, driveStrength, &out_conf, 0);
-	si5351_ResetPLL(SI5351_PLL_A);
-}
-
-// Setup CLK2 for given frequency and drive strength. Use PLLB.
-void si5351_SetupCLK2(int32_t Fclk, si5351DriveStrength_t driveStrength) {
-	si5351PLLConfig_t pll_conf;
-	si5351OutputConfig_t out_conf;
-
-	si5351_Calc(Fclk, &pll_conf, &out_conf);
-	si5351_SetupPLL(SI5351_PLL_B, &pll_conf);
-	si5351_SetupOutput(2, SI5351_PLL_B, driveStrength, &out_conf, 0);
-	si5351_ResetPLL(SI5351_PLL_B);
 }
 
 // Enables or disables outputs depending on provided bitmask.

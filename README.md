@@ -34,6 +34,7 @@ si5351_Calc(Fclk, &pll_conf, &out_conf);
 si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
 
 si5351_SetupOutput(0, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
+si5351_ResetPLL(SI5351_PLL_A);
 si5351_EnableOutputs(1<<0);
 ```
 
@@ -67,14 +68,8 @@ si5351_CalcIQ(Fclk, &pll_conf, &out_conf);
 uint8_t phaseOffset = (uint8_t)out_conf.div;
 si5351_SetupOutput(0, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
 si5351_SetupOutput(2, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, phaseOffset);
-
-/*
- * The order is important! Setup the channels first, then setup the PLL.
- * Alternatively you could reset the PLL after setting up PLL and channels.
- * However since _SetupPLL() always resets the PLL this would only cause
- * sending extra I2C commands.
- */
 si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
+si5351_ResetPLL(SI5351_PLL_A);
 si5351_EnableOutputs((1<<0) | (1<<2));
 ```
 

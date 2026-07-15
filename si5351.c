@@ -134,8 +134,9 @@ void si5351_SetupPLL(si5351PLL_t pll, si5351PLLConfig_t* conf) {
     uint8_t baseaddr = (pll == SI5351_PLL_A ? 26 : 34);
     si5351_writeBulk(baseaddr, P1, P2, P3, 0, 0);
     si5351_SetPLLIntegerMode(pll, si5351_PLLCanUseIntegerMode(conf));
+}
 
-    // Target only the specific PLL being configured to avoid glitching the active one
+void si5351_ResetPLL(si5351PLL_t pll) {
     if (pll == SI5351_PLL_A) {
         si5351_write(SI5351_REGISTER_177_PLL_RESET, (1 << 5)); // Reset PLLA only
     }
@@ -410,6 +411,7 @@ void si5351_SetupCLK0(int32_t Fclk, si5351DriveStrength_t driveStrength) {
 	si5351_Calc(Fclk, &pll_conf, &out_conf);
 	si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
 	si5351_SetupOutput(0, SI5351_PLL_A, driveStrength, &out_conf, 0);
+	si5351_ResetPLL(SI5351_PLL_A);
 }
 
 // Setup CLK2 for given frequency and drive strength. Use PLLB.
@@ -420,6 +422,7 @@ void si5351_SetupCLK2(int32_t Fclk, si5351DriveStrength_t driveStrength) {
 	si5351_Calc(Fclk, &pll_conf, &out_conf);
 	si5351_SetupPLL(SI5351_PLL_B, &pll_conf);
 	si5351_SetupOutput(2, SI5351_PLL_B, driveStrength, &out_conf, 0);
+	si5351_ResetPLL(SI5351_PLL_B);
 }
 
 // Enables or disables outputs depending on provided bitmask.

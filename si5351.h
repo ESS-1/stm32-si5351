@@ -102,6 +102,7 @@ void si5351_Calc(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig_t
 void si5351_CalcIQ(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig_t* out_conf);
 
 void si5351_SetupPLL(si5351PLL_t pll, si5351PLLConfig_t* conf);
+void si5351_ResetPLL(si5351PLL_t pll);
 int si5351_SetupOutput(uint8_t output, si5351PLL_t pllSource, si5351DriveStrength_t driveStrength, si5351OutputConfig_t* conf, uint8_t phaseOffset);
 
 // Waits for the specified PLL to lock and system initialization to complete.

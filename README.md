@@ -20,10 +20,33 @@ int32_t Fclk = 7000000; // 7 MHz
 si5351_Calc(Fclk, &pll_conf, &out_conf);
 si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
 
-si5351_SetupChannel(0, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
+si5351_SetupChannel(0, SI5351_CHANNEL_SRC_PLLA, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
 si5351_ResetPLL(SI5351_PLL_A);
 si5351_EnableOutputs(1<<0);
 ```
+
+### Routing an output directly to the crystal/XO
+
+The library now supports routing `CLK0..CLK2` either to the multisynth (PLL/MS)
+or directly to the crystal/XO. Routing directly to XO bypasses multisynth dividers.
+
+```c
+// Route CLK0 to PLLA/MS, CLK1 directly to XO, CLK2 to PLLB/MS
+si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
+si5351_SetupPLL(SI5351_PLL_B, &pll_conf_b);
+
+si5351_SetupChannel(0, SI5351_CHANNEL_SRC_PLLA, SI5351_DRIVE_STRENGTH_4MA, &out_conf0, 0);
+si5351_SetupChannel(1, SI5351_CHANNEL_SRC_XO,   SI5351_DRIVE_STRENGTH_4MA, NULL,       0);
+si5351_SetupChannel(2, SI5351_CHANNEL_SRC_PLLB, SI5351_DRIVE_STRENGTH_4MA, &out_conf2, 0);
+
+si5351_ResetPLL(SI5351_PLL_A);
+si5351_ResetPLL(SI5351_PLL_B);
+si5351_EnableOutputs((1<<0) | (1<<1) | (1<<2));
+```
+
+Notes:
+- When routing an output directly to XO you cannot use multisynth dividers on that
+  channel.
 
 ### I/Q-Mode
 
@@ -53,8 +76,8 @@ si5351_CalcIQ(Fclk, &pll_conf, &out_conf);
  * 0 and out_conf.div as a phaseOffset for these channels.
  */
 uint8_t phaseOffset = (uint8_t)out_conf.div;
-si5351_SetupChannel(0, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
-si5351_SetupChannel(2, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, phaseOffset);
+si5351_SetupChannel(0, SI5351_CHANNEL_SRC_PLLA, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
+si5351_SetupChannel(2, SI5351_CHANNEL_SRC_PLLA, SI5351_DRIVE_STRENGTH_4MA, &out_conf, phaseOffset);
 si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
 si5351_ResetPLL(SI5351_PLL_A); // Reset PLL to establish lock and correct phase offset
 si5351_EnableOutputs((1<<0) | (1<<2));

@@ -1,4 +1,4 @@
-#include <si5351.h>
+#include "si5351.h"
 
 #include "i2c.h"
 #include "si5351_config.h"
@@ -160,10 +160,10 @@ static void si5351_SetPLLIntegerMode(si5351PLL_t pll, bool enabled) {
 
 // Configures PLL source, drive strength, multisynth divider, Rdivider and phaseOffset.
 // Returns 0 on success, != 0 otherwise.
-int si5351_SetupChannel(uint8_t output, si5351PLL_t pllSource, si5351DriveStrength_t driveStrength, si5351OutputConfig_t* conf, uint8_t phaseOffset) {
-    int32_t div = conf->div;
-    int32_t num = conf->num;
-    int32_t denom = conf->denom;
+int si5351_SetupChannel(uint8_t output, si5351ChannelSource_t src, si5351DriveStrength_t driveStrength, si5351OutputConfig_t* conf, uint8_t phaseOffset) {
+    int32_t div = 0;
+    int32_t num = 0;
+    int32_t denom = 1;
     uint8_t divBy4 = 0;
     int32_t P1, P2, P3;
 
@@ -171,22 +171,31 @@ int si5351_SetupChannel(uint8_t output, si5351PLL_t pllSource, si5351DriveStreng
         return 1;
     }
 
-    if((!conf->allowIntegerMode) && ((div < 8) || ((div == 8) && (num == 0)))) {
-        // div in { 4, 6, 8 } is possible only in integer mode
-        return 2;
-    }
+    // If source is one of the PLL-based multisynths, program MS parameters.
+    if (src == SI5351_CHANNEL_SRC_PLLA || src == SI5351_CHANNEL_SRC_PLLB) {
+        if (conf == NULL) return 3; // invalid params for PLL/MS source
 
-    if(div == 4) {
-        // special DIVBY4 case, see AN619 4.1.3
-        P1 = 0;
-        P2 = 0;
-        P3 = 1;
-        divBy4 = 0x3;
-    } else {
-        P1 = 128 * div + ((128 * num)/denom) - 512;
-        // P2 = 128 * num - denom * (128 * num)/denom;
-        P2 = (128 * num) % denom;
-        P3 = denom;
+        div = conf->div;
+        num = conf->num;
+        denom = conf->denom;
+
+        if((!conf->allowIntegerMode) && ((div < 8) || ((div == 8) && (num == 0)))) {
+            // div in { 4, 6, 8 } is possible only in integer mode
+            return 2;
+        }
+
+        if(div == 4) {
+            // special DIVBY4 case, see AN619 4.1.3
+            P1 = 0;
+            P2 = 0;
+            P3 = 1;
+            divBy4 = 0x3;
+        } else {
+            P1 = 128 * div + ((128 * num)/denom) - 512;
+            // P2 = 128 * num - denom * (128 * num)/denom;
+            P2 = (128 * num) % denom;
+            P3 = denom;
+        }
     }
 
     // Get the register addresses for given channel
@@ -212,8 +221,17 @@ int si5351_SetupChannel(uint8_t output, si5351PLL_t pllSource, si5351DriveStreng
     }
 
     uint8_t clkControl = 0x0C | driveStrength; // clock not inverted, powered up
-    if(pllSource == SI5351_PLL_B) {
+    if(src == SI5351_CHANNEL_SRC_PLLB) {
         clkControl |= (1 << 5); // Uses PLLB
+    }
+
+    // Source select: bit 4 = 1 -> XO, 0 -> multisynth (PLL/MS)
+    if (src == SI5351_CHANNEL_SRC_XO) {
+        clkControl |= (1 << 4);
+        // When routed to XO we do not program multisynth parameters for this channel.
+        // Just write clk control and return.
+        si5351_write(clkControlRegister, clkControl);
+        return 0;
     }
 
     if((conf->allowIntegerMode) && ((num == 0)||(div == 4))) {

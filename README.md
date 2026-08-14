@@ -10,7 +10,7 @@ Si5351 is a I2C-programmable 8 kHz - 160 MHz clock generator made by Silicon Lab
 
 ```c
 const int32_t correction = 978;
-si5351_Init(correction, SI5351_CRYSTAL_LOAD_10PF);
+si5351_Init(correction, SI5351_CRYSTAL_LOAD_10PF, false);
 
 si5351PLLConfig_t pll_conf;
 si5351OutputConfig_t out_conf;
@@ -31,6 +31,10 @@ The library now supports routing `CLK0..CLK2` either to the multisynth (PLL/MS)
 or directly to the crystal/XO. Routing directly to XO bypasses multisynth dividers.
 
 ```c
+// Enable fanout
+const int32_t correction = 978;
+si5351_Init(correction, SI5351_CRYSTAL_LOAD_10PF, true);
+
 // Route CLK0 to PLLA/MS, CLK1 directly to XO, CLK2 to PLLB/MS
 si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
 si5351_SetupPLL(SI5351_PLL_B, &pll_conf_b);
@@ -52,7 +56,7 @@ Notes:
 
 ```c
 const int32_t correction = 978;
-si5351_Init(correction, SI5351_CRYSTAL_LOAD_10PF);
+si5351_Init(correction, SI5351_CRYSTAL_LOAD_10PF, false);
 
 si5351PLLConfig_t pll_conf;
 si5351OutputConfig_t out_conf;

@@ -173,7 +173,9 @@ int si5351_SetupChannel(uint8_t output, si5351ChannelSource_t src, si5351DriveSt
 
     // If source is one of the PLL-based multisynths, program MS parameters.
     if (src == SI5351_CHANNEL_SRC_PLLA || src == SI5351_CHANNEL_SRC_PLLB) {
-        if (conf == NULL) return 3; // invalid params for PLL/MS source
+        if (conf == NULL) {
+            return 3; // invalid params for PLL/MS source
+        }
 
         div = conf->div;
         num = conf->num;
@@ -220,21 +222,23 @@ int si5351_SetupChannel(uint8_t output, si5351ChannelSource_t src, si5351DriveSt
         break;
     }
 
-    uint8_t clkControl = 0x0C | driveStrength; // clock not inverted, powered up
-    if(src == SI5351_CHANNEL_SRC_PLLB) {
-        clkControl |= (1 << 5); // Uses PLLB
-    }
+    uint8_t clkControl = driveStrength; // clock not inverted, powered up
 
-    // Source select: bit 4 = 1 -> XO, 0 -> multisynth (PLL/MS)
+    // Source select: CLKx_SRC[1:0] (bits 3:2) = 00 -> XO, 11 -> MultiSynth
     if (src == SI5351_CHANNEL_SRC_XO) {
-        clkControl |= (1 << 4);
         // When routed to XO we do not program multisynth parameters for this channel.
         // Just write clk control and return.
         si5351_write(clkControlRegister, clkControl);
         return 0;
     }
 
-    if((conf->allowIntegerMode) && ((num == 0)||(div == 4))) {
+    clkControl |= 0x0C; // Select MultiSynth as input source (bits 3:2 = 11)
+
+    if (src == SI5351_CHANNEL_SRC_PLLB) {
+        clkControl |= (1 << 5); // Uses PLLB
+    }
+
+    if ((conf->allowIntegerMode) && ((num == 0) || (div == 4))) {
         // use integer mode
         clkControl |= (1 << 6);
     }

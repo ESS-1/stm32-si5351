@@ -76,8 +76,8 @@ si5351_CalcIQ(Fclk, &pll_conf, &out_conf);
  * 0 and out_conf.div as a phaseOffset for these channels.
  */
 uint8_t phaseOffset = (uint8_t)out_conf.div;
-si5351_SetupChannel(0, SI5351_CHANNEL_SRC_PLLA, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
-si5351_SetupChannel(2, SI5351_CHANNEL_SRC_PLLA, SI5351_DRIVE_STRENGTH_4MA, &out_conf, phaseOffset);
+si5351_SetupChannel(0, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
+si5351_SetupChannel(2, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, phaseOffset);
 si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
 si5351_ResetPLL(SI5351_PLL_A); // Reset PLL to establish lock and correct phase offset
 si5351_EnableOutputs((1<<0) | (1<<2));

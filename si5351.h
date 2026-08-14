@@ -102,7 +102,7 @@ void si5351_CalcIQ(int32_t Fclk, si5351PLLConfig_t* pll_conf, si5351OutputConfig
 void si5351_SetupPLL(si5351PLL_t pll, si5351PLLConfig_t* conf);
 void si5351_ResetPLL(si5351PLL_t pll);
 int si5351_SetupChannel(uint8_t output, si5351PLL_t pllSource, si5351DriveStrength_t driveStrength, si5351OutputConfig_t* conf, uint8_t phaseOffset);
-int si5351_SetupChannelBypass(uint8_t output, si5351DriveStrength_t driveStrength);
+void si5351_SetupChannelBypass(uint8_t output, si5351DriveStrength_t driveStrength);
 void si5351_DisableChannel(uint8_t output);
 
 // Waits for the specified PLL to lock and system initialization to complete.

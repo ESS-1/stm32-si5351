@@ -20,7 +20,7 @@ int32_t Fclk = 7000000; // 7 MHz
 si5351_Calc(Fclk, &pll_conf, &out_conf);
 si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
 
-si5351_SetupChannel(0, SI5351_CHANNEL_SRC_PLLA, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
+si5351_SetupChannel(0, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf, 0);
 si5351_ResetPLL(SI5351_PLL_A);
 si5351_EnableOutputs(1<<0);
 ```
@@ -35,9 +35,9 @@ or directly to the crystal/XO. Routing directly to XO bypasses multisynth divide
 si5351_SetupPLL(SI5351_PLL_A, &pll_conf);
 si5351_SetupPLL(SI5351_PLL_B, &pll_conf_b);
 
-si5351_SetupChannel(0, SI5351_CHANNEL_SRC_PLLA, SI5351_DRIVE_STRENGTH_4MA, &out_conf0, 0);
-si5351_SetupChannel(1, SI5351_CHANNEL_SRC_XO,   SI5351_DRIVE_STRENGTH_4MA, NULL,       0);
-si5351_SetupChannel(2, SI5351_CHANNEL_SRC_PLLB, SI5351_DRIVE_STRENGTH_4MA, &out_conf2, 0);
+si5351_SetupChannel(0, SI5351_PLL_A, SI5351_DRIVE_STRENGTH_4MA, &out_conf0, 0);
+si5351_SetupChannelBypass(1, SI5351_DRIVE_STRENGTH_4MA);
+si5351_SetupChannel(2, SI5351_PLL_B, SI5351_DRIVE_STRENGTH_4MA, &out_conf2, 0);
 
 si5351_ResetPLL(SI5351_PLL_A);
 si5351_ResetPLL(SI5351_PLL_B);

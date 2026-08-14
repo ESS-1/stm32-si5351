@@ -228,7 +228,6 @@ int si5351_SetupChannel(uint8_t output, si5351PLL_t pllSource, si5351DriveStreng
     return 0;
 }
 
-// Returns 0 on success, != 0 otherwise.
 void si5351_SetupChannelBypass(uint8_t output, si5351DriveStrength_t driveStrength) {
     if(output > 2) {
         return;

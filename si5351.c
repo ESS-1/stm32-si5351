@@ -87,7 +87,8 @@ enum {
     SI5351_REGISTER_169_CLK4_INITIAL_PHASE_OFFSET         = 169,
     SI5351_REGISTER_170_CLK5_INITIAL_PHASE_OFFSET         = 170,
     SI5351_REGISTER_177_PLL_RESET                         = 177,
-    SI5351_REGISTER_183_CRYSTAL_INTERNAL_LOAD_CAPACITANCE = 183
+    SI5351_REGISTER_183_CRYSTAL_INTERNAL_LOAD_CAPACITANCE = 183,
+	SI5351_REGISTER_187_FANOUT_ENABLE                     = 187,
 };
 
 int32_t si5351Correction;
@@ -98,7 +99,7 @@ int32_t si5351Correction;
  * It can be measured at lower frequencies and scaled linearly.
  * E.g. if you get 10_000_097 Hz instead of 10_000_000 Hz, `correction` is 97*10 = 970
  */
-void si5351_Init(int32_t correction, si5351CrystalLoad_t crystalLoad) {
+void si5351_Init(int32_t correction, si5351CrystalLoad_t crystalLoad, bool enableFanout) {
     si5351Correction = correction;
 
     // Disable all outputs by setting CLKx_DIS high
@@ -116,6 +117,11 @@ void si5351_Init(int32_t correction, si5351CrystalLoad_t crystalLoad) {
 
     // Set the load capacitance for the XTAL
     si5351_write(SI5351_REGISTER_183_CRYSTAL_INTERNAL_LOAD_CAPACITANCE, crystalLoad);
+
+    if (enableFanout) {
+        // Enable fanout for MultiSynth and Crystal Oscillator (XO)
+        si5351_write(SI5351_REGISTER_187_FANOUT_ENABLE, 0x50);
+	}
 }
 
 // Sets the multiplier for given PLL

@@ -76,7 +76,7 @@ typedef struct {
  * CLK0 and CLK2 were chosen because they are distant from each other on a common
  * Si5351 module. This makes using them a little more convenient than CLK0 and CLK1.
  */
-void si5351_Init(int32_t correction, si5351CrystalLoad_t crystalLoad);
+void si5351_Init(int32_t correction, si5351CrystalLoad_t crystalLoad, bool enableFanout);
 void si5351_EnableOutputs(uint8_t enabled);
 
 /*
